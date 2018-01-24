@@ -127,6 +127,10 @@ func (m *MachinesSyncer) reconcileAll() error {
 
 func (m *MachinesSyncer) reconcileMachineForNode(machine *v3.Machine, node *corev1.Node, pods map[string][]*corev1.Pod) error {
 	if machine == nil {
+		// never delete RKE node
+		if machine.Spec.MachineTemplateName != "" {
+			return nil
+		}
 		return m.createMachine(node, pods)
 	}
 	return m.updateMachine(machine, node, pods)
@@ -202,8 +206,10 @@ func (m *MachinesSyncer) getMachineForNode(nodeName string, cache bool) (*v3.Mac
 			return nil, err
 		}
 		for _, machine := range machines.Items {
-			if isMachineForNode(nodeName, &machine) {
-				return &machine, nil
+			if machine.Namespace == m.clusterNamespace {
+				if isMachineForNode(nodeName, &machine) {
+					return &machine, nil
+				}
 			}
 		}
 	}
